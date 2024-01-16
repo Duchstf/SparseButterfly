@@ -1,6 +1,10 @@
 # SparseButterfly
 Butterfly matrix for Sparse NN Inference on FPGA
 
+# Blog post
+
+Butterflies Are All You Need: A Universal Building Block for Structured Linear Maps: https://dawn.cs.stanford.edu/2019/06/13/butterfly/
+
 # Related Paper
 
 * Monarch: Expressive Structured Matrices for Efficient and
