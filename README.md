@@ -21,6 +21,7 @@ Neural Network Models: https://arxiv.org/pdf/2112.00029.pdf
 * Learning Fast Algorithms for Linear Transforms Using Butterfly Factorizations: https://arxiv.org/abs/1903.05895
 
 * Adaptable Butterfly Accelerator for Attention-based NNs via Hardware and Algorithm Co-design: https://steliosven10.github.io/papers/[2022]_micro_adaptable_butterfly_accelerator_for_attention_based_nns_via_hardware_and_algorithm_codesign.pdf
+* Deformable Butterfly: A Highly Structured and Sparse Linear Transform: https://arxiv.org/pdf/2203.13556.pdf
 
 # Related Code
 
