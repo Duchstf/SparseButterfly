@@ -1,6 +1,12 @@
 # SparseButterfly
 Butterfly matrix for Sparse NN Inference on FPGA
 
+
+# Related Code
+
+* Pixelfly: https://github.com/HazyResearch/fly
+* Sparse Linear Networks with a Fixed Butterfly Structure: Theory and Practice. https://github.com/leibovit/Sparse-Linear-Networks
+
 # Related Blog Posts
 
 Butterflies Are All You Need: A Universal Building Block for Structured Linear Maps: https://dawn.cs.stanford.edu/2019/06/13/butterfly/
@@ -23,6 +29,3 @@ Neural Network Models: https://arxiv.org/pdf/2112.00029.pdf
 * Adaptable Butterfly Accelerator for Attention-based NNs via Hardware and Algorithm Co-design: https://steliosven10.github.io/papers/[2022]_micro_adaptable_butterfly_accelerator_for_attention_based_nns_via_hardware_and_algorithm_codesign.pdf
 * Deformable Butterfly: A Highly Structured and Sparse Linear Transform: https://arxiv.org/pdf/2203.13556.pdf
 
-# Related Code
-
-* Sparse Linear Networks with a Fixed Butterfly Structure: Theory and Practice. https://github.com/leibovit/Sparse-Linear-Networks
