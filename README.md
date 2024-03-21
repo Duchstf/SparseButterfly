@@ -17,6 +17,12 @@ Activate the environment:
 conda activate fly
 ```
 
+install pytorch:
+
+```
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+```
+
 And then do whatever you want in this environment (edit files, open notebooks, etc.). To deactivate the environment:
 
 ```
