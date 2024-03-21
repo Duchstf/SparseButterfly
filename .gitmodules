@@ -1,3 +1,0 @@
-[submodule "submodules/fly"]
-	path = submodules/fly
-	url = git@github.com:HazyResearch/fly.git
