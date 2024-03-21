@@ -1,11 +1,20 @@
 import math
 import numpy as np
+import torchvision.datasets as datasets
+
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
 
 import torch
 from torch.nn import functional as F
 import torch.nn as nn
 from einops import rearrange
 
+
+mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=None)
+print(mnist_trainset)
 
 def blockdiag_butterfly_multiply_reference(x, w1_bfly, w2_bfly, version=2):
     """
@@ -61,10 +70,15 @@ class BlockdiagButterflyMultiply(torch.autograd.Function):
     @staticmethod
     @torch.cuda.amp.custom_fwd(cast_inputs=torch.float16)
     def forward(ctx, x, w1_bfly, w2_bfly):
+        #print(f'x.shape:{x.shape}')
         batch_shape, n = x.shape[:-1], x.shape[-1]
         batch_dim = np.prod(batch_shape)
         k, q, p = w1_bfly.shape
+        # print(f'k, q, p: {k, q, p}')
+        # print(f'k*p:{k * p}')
+        # print(f'n:{n}')
         l, s, r = w2_bfly.shape
+        # print(f'l, s, r: {l, s, r}')
         assert k * p == n
         assert l * r == k * q
         x_reshaped = x.reshape(batch_dim, k, p).transpose(0, 1)
@@ -124,14 +138,16 @@ class ButterflyBlockDiagLayer(nn.Module):
         return blockdiag_butterfly_multiply(x, self.w1_bfly, self.w2_bfly)
          
 
-class DenseNN(nn.Module):
+class Butterfly_DNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
-        super(DenseNN, self).__init__()
-        self.layer1 = ButterflyBlockDiagLayer(input_size, q=4, p=4, s=4, r=4)
+        super(Butterfly_DNN, self).__init__()
+        self.flatten = nn.Flatten()
+        self.layer1 = ButterflyBlockDiagLayer(input_size, q=4, p=16, s=8, r=4)
         self.layer2 = ButterflyBlockDiagLayer(hidden_size, q=4, p=4, s=4, r=4)
         self.layer3 = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
+        x = self.flatten(x)
         x = self.layer1(x)
         x = torch.relu(x)
         x = self.layer2(x)
@@ -140,14 +156,115 @@ class DenseNN(nn.Module):
         return x
 
 
-input_size = 16  
-hidden_size = 16  
-output_size = 10 
+###### Training on MNIST:
+train_set = datasets.MNIST('./data', train=True, download=True)
+test_set = datasets.MNIST('./data', train=False, download=True)
 
-model = DenseNN(input_size, hidden_size, output_size)
-print(model)
+x_train, y_train = train_set.data/255., train_set.targets
+x_test, y_test = test_set.data/255., test_set.targets
+print(x_train.shape)
+print(x_test.shape)
 
-dummy_input = torch.randn(1, input_size)
-print(dummy_input)
-output = model(dummy_input)
-print(output)
+
+### Training/testing loop for normal DNN:
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def create_base_model(LinearLayer):
+    model = nn.Sequential(
+        nn.Flatten(),
+        LinearLayer(28*28, 128),
+        nn.ReLU(),
+        LinearLayer(128, 128),
+        nn.ReLU(),
+        LinearLayer(128, 10),
+    )
+    return model
+
+
+def train(model, epochs=2, batch_size=32, lr=0.001):
+    num_iters = x_train.shape[0] // batch_size
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn = nn.CrossEntropyLoss()
+
+    for epoch in range(epochs):
+        model.train()
+        for iter in range(num_iters):
+            i_start = iter * batch_size
+            x_batch = x_train[i_start : i_start+batch_size].to(device)
+            y_batch = y_train[i_start : i_start+batch_size].to(device)
+            #print(x_batch.shape)
+            optimizer.zero_grad()
+            y_pred = model(x_batch)
+            loss = loss_fn(y_pred, y_batch)
+            loss.backward()
+            optimizer.step()
+
+        model.eval()
+        y_pred = model(x_test.to(device))
+        print(y_pred.shape)
+        cls_pred = y_pred.argmax(dim=1, keepdim=True).cpu().numpy()
+        accuracy = np.mean(cls_pred[:,0] == y_test.numpy())
+        print(f"epoch: {epoch}  ||  loss: {loss:.4f}  ||  acc: {100*accuracy:.2f}%")
+
+    return model
+
+# base_model = create_base_model(LinearLayer=nn.Linear)
+# base_model.to(device)
+# base_model = train(base_model)
+
+
+# torch.save(base_model.state_dict(), 'model_weights.pth')
+# base_model.load_state_dict(torch.load('model_weights.pth'))
+# import matplotlib.pyplot as plt
+
+# layer_weights = base_model[3].weight.data.numpy()  # Convert to numpy array
+# print(layer_weights)
+
+# plt.imshow(layer_weights, cmap='gray')  # 'viridis' is a colormap, you can choose others like 'gray'
+# plt.colorbar()
+# plt.title("Visualization of Layer Weights")
+# plt.show()
+# plt.savefig("bob.png")
+
+## Training/testing loop for butterfly matrices DNN:
+
+butterfly_dnn = Butterfly_DNN(28*28, 392, 10)
+butterfly_dnn.to(device)
+butterfly_dnn = train(butterfly_dnn)
+torch.save(butterfly_dnn.state_dict(), 'model_weights.pth')
+butterfly_dnn.load_state_dict(torch.load('model_weights.pth'))
+import matplotlib.pyplot as plt
+
+layer_weights = butterfly_dnn._modules['layer1']  
+print(layer_weights)
+print(type(layer_weights))
+
+w1_bfly = butterfly_dnn._modules['layer1'].w1_bfly.detach().cpu().numpy()
+w2_bfly = butterfly_dnn._modules['layer1'].w2_bfly.detach().cpu().numpy()
+print(w1_bfly)
+print(w2_bfly)
+print(w1_bfly.shape)
+print(w2_bfly.shape)
+plt.imshow(w2_bfly[0, :, :], cmap='gray') 
+plt.colorbar()
+plt.title("Visualization of Layer Weights")
+plt.show()
+plt.savefig("bob_hi.png")
+
+# def visualize_matrix(matrix, title="Matrix Visualization"):
+#     plt.imshow(matrix, cmap='viridis')
+#     plt.colorbar()
+#     plt.title(title)
+#     plt.show()
+
+
+# for i, block in enumerate(w1_bfly):
+#     visualize_matrix(block, title=f"W1 Block {i}")
+
+# for i, block in enumerate(w2_bfly):
+#     visualize_matrix(block, title=f"W2 Block {i}")
+
+
+
+
