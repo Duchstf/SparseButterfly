@@ -14,7 +14,7 @@ def plot_diag_weight(fc):
     '''
     print("Plotting layer's weight")
     
-    w = fc.weight.detach().cpu().numpy()
+    w = fc.blkdiag1.detach().cpu().numpy()
     
     print("W Shape: ", w.shape)
     print("Saving factor: ", fc.saving)

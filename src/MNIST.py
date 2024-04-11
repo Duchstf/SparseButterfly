@@ -152,7 +152,7 @@ def main():
         else: torch.save(model.state_dict(), "../models/mnist_mlp_vanilla.pt")
         
     #Save step loss
-    loss_name = 'MNIST_MLP_Monarch.npy' if args.monarch else 'MNIST_MLP_Vanilla.npy'
+    loss_name = 'loss/MNIST_MLP_Monarch.npy' if args.monarch else 'loss/MNIST_MLP_Vanilla.npy'
     np.save(loss_name, np.asarray(training_loss))
 
 if __name__ == '__main__':
