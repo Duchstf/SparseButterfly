@@ -8,8 +8,8 @@ def plot_loss():
     plt.style.use(hep.style.CMS)
     
     # Load loss
-    loss1 = np.load('MNIST_MLP_Monarch.npy')
-    loss2 = np.load('MNIST_MLP_Vanilla.npy')
+    loss1 = np.load('CIFAR10_MLP_Monarch.npy')
+    loss2 = np.load('CIFAR10_MLP_Vanilla.npy')
     
     # Plot loss
     plt.plot(loss1, label='Monarch')
@@ -18,7 +18,7 @@ def plot_loss():
     plt.ylabel('Loss')
     plt.legend()
     plt.show()
-    plt.savefig("loss.png")
+    plt.savefig("loss_CIFAR10.png")
     
 if __name__ == '__main__':
     plot_loss()

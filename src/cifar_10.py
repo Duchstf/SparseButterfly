@@ -54,7 +54,7 @@ def test(model, device, test_loader):
 def main():
     
     # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST MLPs Vanilla and Monarch')
+    parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 MLPs Vanilla and Monarch')
     parser.add_argument('--monarch', action='store_true',  default=False,
                         help='Whether to train with monarch matrices or not')
     
@@ -103,7 +103,8 @@ def main():
     else:
         device = torch.device("cpu")
 
-    train_kwargs = {'batch_size': args.batch_size}
+    train_kwargs = {'batch_size': args.batch_size,
+                    'shuffle': True}
     test_kwargs = {'batch_size': args.test_batch_size}
     if use_cuda:
         cuda_kwargs = {'num_workers': 1,
@@ -112,31 +113,26 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    transform=transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
-        ])
-    
-    #Load MNIST data
-    dataset1 = datasets.MNIST('../data', train=True, download=True,
-                       transform=transform)
-    dataset2 = datasets.MNIST('../data', train=False,
-                       transform=transform)
-    
-    train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
+    # Load CIFAR-10 Data
+    dataset_train = datasets.CIFAR10(root='./data', train=True,
+                                            download=True, transform=transform)
+    train_loader = torch.utils.data.DataLoader(dataset_train, **train_kwargs)
+    dataset_test = datasets.CIFAR10(root='./data', train=False,
+                                       download=True, transform=transform)
+    test_loader = torch.utils.data.DataLoader(dataset_test, **test_kwargs)
     #Initialize the model
     if args.monarch:
-        model = MNIST_Monarch_MLP(784).to(device)
+        model = CIFAR10_Monarch_MLP(3072).to(device)
         
-        # Plot the diagonal matrix
-        fc1= model._modules['fc1']
-        plot_diag_weight(fc1)
+        # # Plot the diagonal matrix
+        # fc1= model._modules['fc1']
+        # plot_diag_weight(fc1)
     else:
-        model = MNIST_MLP_Vanilla(784).to(device)
+        model = CIFAR10_MLP_Vanilla(3072).to(device)
         
-    optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr) #args.lr
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
     
@@ -148,11 +144,11 @@ def main():
         scheduler.step()
 
     if args.save_model:
-        if args.monarch: torch.save(model.state_dict(), "../models/mnist_mlp_monarch.pt")
-        else: torch.save(model.state_dict(), "../models/mnist_mlp_vanilla.pt")
+        if args.monarch: torch.save(model.state_dict(), "plots/CIFAR10_mlp_monarch.pt")
+        else: torch.save(model.state_dict(), "plots/CIFAR10_mlp_vanilla.pt")
         
     #Save step loss
-    loss_name = 'MNIST_MLP_Monarch.npy' if args.monarch else 'MNIST_MLP_Vanilla.npy'
+    loss_name = 'loss/CIFAR10_MLP_Monarch.npy' if args.monarch else 'loss/CIFAR10_MLP_Vanilla.npy'
     np.save(loss_name, np.asarray(training_loss))
 
 if __name__ == '__main__':

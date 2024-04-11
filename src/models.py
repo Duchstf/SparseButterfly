@@ -86,10 +86,10 @@ class CIFAR10_Monarch_MLP(nn.Module):
     """
     def __init__(self, in_features, out_features=10):
         super().__init__()
-        self.fc1 = BlockdiagLinear(in_features, 392, nblocks=10)
-        self.fc2 = BlockdiagLinear(392, 128,  nblocks=10, bias=True)
-        self.fc3 = BlockdiagLinear(128, 64,  nblocks=10, bias=True)
-        self.fc4 = BlockdiagLinear(64, out_features, nblocks=10, bias=True)
+        self.fc1 = MonarchLinear(in_features, 392, nblocks=10)
+        self.fc2 = MonarchLinear(392, 128,  nblocks=10, bias=True)
+        self.fc3 = MonarchLinear(128, 64,  nblocks=10, bias=True)
+        self.fc4 = MonarchLinear(64, out_features, nblocks=10, bias=True)
         
     def forward(self, x):
         x = torch.flatten(x, 1)
