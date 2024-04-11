@@ -7,27 +7,15 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
-
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.fc1 = nn.Linear(784, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 10)
-
-    def forward(self, x):
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
-        output = F.log_softmax(x, dim=1)
-        return output
-
+from models import *
+from utils import plot_diag_weight
 
 def train(args, model, device, train_loader, optimizer, epoch):
+    
+    step_loss = []
+    
     model.train()
+    
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -41,7 +29,9 @@ def train(args, model, device, train_loader, optimizer, epoch):
                 100. * batch_idx / len(train_loader), loss.item()))
             if args.dry_run:
                 break
-
+        step_loss.append(loss.item())
+        
+    return step_loss
 
 def test(model, device, test_loader):
     model.eval()
@@ -61,22 +51,21 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-
 def main():
     
     # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST MLPs Vanilla and Butterfly')
-    parser.add_argument('--butterfly', type=bool, default=False, metavar='N',
-                        help='input batch size for training (default: 64)')
+    parser = argparse.ArgumentParser(description='PyTorch MNIST MLPs Vanilla and Monarch')
+    parser.add_argument('--monarch', action='store_true',  default=False,
+                        help='Whether to train with monarch matrices or not')
     
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                         help='input batch size for training (default: 64)')
     
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
     
-    parser.add_argument('--epochs', type=int, default=2, metavar='N',
-                        help='number of epochs to train (default: 14)')
+    parser.add_argument('--epochs', type=int, default=5, metavar='N',
+                        help='number of epochs to train (default: 5)')
     
     parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
                         help='learning rate (default: 1.0)')
@@ -127,25 +116,44 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
         ])
+    
+    #Load MNIST data
     dataset1 = datasets.MNIST('../data', train=True, download=True,
                        transform=transform)
     dataset2 = datasets.MNIST('../data', train=False,
                        transform=transform)
+    
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    model = Net().to(device)
+    #Initialize the model
+    if args.monarch:
+        model = MNIST_Monarch_MLP(784).to(device)
+        
+        # Plot the diagonal matrix
+        fc1= model._modules['fc1']
+        plot_diag_weight(fc1)
+    else:
+        model = MNIST_MLP_Vanilla(784).to(device)
+        
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+    
+    training_loss = []
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
+        step_loss = train(args, model, device, train_loader, optimizer, epoch)
+        training_loss += step_loss
         test(model, device, test_loader)
         scheduler.step()
 
     if args.save_model:
-        torch.save(model.state_dict(), "../models/mnist_mlp.pt")
-
+        if args.monarch: torch.save(model.state_dict(), "../models/mnist_mlp_monarch.pt")
+        else: torch.save(model.state_dict(), "../models/mnist_mlp_vanilla.pt")
+        
+    #Save step loss
+    loss_name = 'MNIST_MLP_Monarch.npy' if args.monarch else 'MNIST_MLP_Vanilla.npy'
+    np.save(loss_name, np.asarray(training_loss))
 
 if __name__ == '__main__':
     main()

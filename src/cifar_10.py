@@ -11,7 +11,11 @@ from models import *
 from utils import plot_diag_weight
 
 def train(args, model, device, train_loader, optimizer, epoch):
+    
+    step_loss = []
+    
     model.train()
+    
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -25,6 +29,9 @@ def train(args, model, device, train_loader, optimizer, epoch):
                 100. * batch_idx / len(train_loader), loss.item()))
             if args.dry_run:
                 break
+        step_loss.append(loss.item())
+        
+    return step_loss
 
 def test(model, device, test_loader):
     model.eval()
@@ -51,14 +58,14 @@ def main():
     parser.add_argument('--monarch', action='store_true',  default=False,
                         help='Whether to train with monarch matrices or not')
     
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                         help='input batch size for training (default: 64)')
     
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
     
-    parser.add_argument('--epochs', type=int, default=1, metavar='N',
-                        help='number of epochs to train (default: 14)')
+    parser.add_argument('--epochs', type=int, default=5, metavar='N',
+                        help='number of epochs to train (default: 5)')
     
     parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
                         help='learning rate (default: 1.0)')
@@ -121,7 +128,7 @@ def main():
 
     #Initialize the model
     if args.monarch:
-        model = Monarch_MLP(784).to(device)
+        model = MNIST_Monarch_MLP(784).to(device)
         
         # Plot the diagonal matrix
         fc1= model._modules['fc1']
@@ -132,14 +139,21 @@ def main():
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
+    
+    training_loss = []
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
+        step_loss = train(args, model, device, train_loader, optimizer, epoch)
+        training_loss += step_loss
         test(model, device, test_loader)
         scheduler.step()
 
     if args.save_model:
         if args.monarch: torch.save(model.state_dict(), "../models/mnist_mlp_monarch.pt")
         else: torch.save(model.state_dict(), "../models/mnist_mlp_vanilla.pt")
+        
+    #Save step loss
+    loss_name = 'MNIST_MLP_Monarch.npy' if args.monarch else 'MNIST_MLP_Vanilla.npy'
+    np.save(loss_name, np.asarray(training_loss))
 
 if __name__ == '__main__':
     main()
