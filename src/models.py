@@ -70,11 +70,11 @@ class CIFAR10_MLP_Vanilla(nn.Module):
     def forward(self, x):
         x = torch.flatten(x, 1)
         x = self.fc1(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.fc2(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.fc3(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.fc4(x)
         output = F.log_softmax(x, dim=1)
         return output
@@ -94,11 +94,11 @@ class CIFAR10_Monarch_MLP(nn.Module):
     def forward(self, x):
         x = torch.flatten(x, 1)
         x = self.fc1(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.fc2(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.fc3(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.fc4(x)
         output = F.log_softmax(x, dim=1)
         return output
