@@ -7,10 +7,8 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-from models import ButterflyMlp, MonarchMlp, MonarchMLP2
+from models import *
+from utils import plot_diag_weight
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
@@ -27,7 +25,6 @@ def train(args, model, device, train_loader, optimizer, epoch):
                 100. * batch_idx / len(train_loader), loss.item()))
             if args.dry_run:
                 break
-
 
 def test(model, device, test_loader):
     model.eval()
@@ -47,13 +44,12 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-
 def main():
     
     # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST MLPs Vanilla and Butterfly')
-    parser.add_argument('--butterfly', type=bool, default=False, metavar='N',
-                        help='input batch size for training (default: 64)')
+    parser = argparse.ArgumentParser(description='PyTorch MNIST MLPs Vanilla and Monarch')
+    parser.add_argument('--monarch', action='store_true',  default=False,
+                        help='Whether to train with monarch matrices or not')
     
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
@@ -113,14 +109,26 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))
         ])
+    
+    #Load MNIST data
     dataset1 = datasets.MNIST('../data', train=True, download=True,
                        transform=transform)
     dataset2 = datasets.MNIST('../data', train=False,
                        transform=transform)
+    
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    model = MonarchMLP2(784).to(device)
+    #Initialize the model
+    if args.monarch:
+        model = Monarch_MLP(784).to(device)
+        
+        # Plot the diagonal matrix
+        fc1= model._modules['fc1']
+        plot_diag_weight(fc1)
+    else:
+        model = MNIST_MLP_Vanilla(784).to(device)
+        
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
@@ -130,34 +138,8 @@ def main():
         scheduler.step()
 
     if args.save_model:
-        torch.save(model.state_dict(), "../models/mnist_mlp.pt")
-
-    # Plot the weights
-    # fc1_sparse_mask = model._modules['fc1'].sparse_mask.detach().cpu().numpy()
-    # fc1_weight = model._modules['fc1'].weight.detach().cpu().numpy()
-    
-    # print("Saving factor: ", model._modules['fc1'].saving.detach().cpu().numpy())
-    # plt.imshow(fc1_sparse_mask, cmap='Reds')
-    # plt.title("First Layer Sparse Mask")
-    # plt.colorbar()
-    # plt.show()
-    # plt.savefig("plots/fc1_sparsemask.png")
-    
-    # plt.imshow(fc1_weight, cmap='Reds')
-    # plt.title("First Layer Weight")
-    # plt.show()
-    # plt.savefig("plots/fc1_weight.png")
-    
-    # For Mornarch model
-    fc1_sparse_mask = model._modules['fc1'].weight.detach().cpu().numpy()
-    
-    print(fc1_sparse_mask.shape)
-    print("Saving factor: ", model._modules['fc1'].saving)
-    plt.imshow(fc1_sparse_mask[0, :, :], cmap='Reds')
-    plt.title("First Layer Sparse Mask")
-    plt.colorbar()
-    plt.show()
-    plt.savefig("plots/fc1_sparsemask_mornarch.png")
+        if args.monarch: torch.save(model.state_dict(), "../models/mnist_mlp_monarch.pt")
+        else: torch.save(model.state_dict(), "../models/mnist_mlp_vanilla.pt")
 
 if __name__ == '__main__':
     main()
