@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 import numpy as np
 
-from models import ButterflyMlp
+from models import ButterflyMlp, MonarchMlp, MonarchMLP2
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
@@ -120,7 +120,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(dataset1,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    model = ButterflyMlp(784).to(device)
+    model = MonarchMLP2(784).to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
@@ -132,15 +132,32 @@ def main():
     if args.save_model:
         torch.save(model.state_dict(), "../models/mnist_mlp.pt")
 
-    #Plot the weights
-    fc1_sparse_mask = model._modules['fc1'].sparse_mask.detach().cpu().numpy()
+    # Plot the weights
+    # fc1_sparse_mask = model._modules['fc1'].sparse_mask.detach().cpu().numpy()
+    # fc1_weight = model._modules['fc1'].weight.detach().cpu().numpy()
     
-    print(np.count_nonzero(fc1_sparse_mask)/(fc1_sparse_mask.shape[0]*fc1_sparse_mask.shape[1]))
-    plt.imshow(fc1_sparse_mask, cmap='Reds')
+    # print("Saving factor: ", model._modules['fc1'].saving.detach().cpu().numpy())
+    # plt.imshow(fc1_sparse_mask, cmap='Reds')
+    # plt.title("First Layer Sparse Mask")
+    # plt.colorbar()
+    # plt.show()
+    # plt.savefig("plots/fc1_sparsemask.png")
+    
+    # plt.imshow(fc1_weight, cmap='Reds')
+    # plt.title("First Layer Weight")
+    # plt.show()
+    # plt.savefig("plots/fc1_weight.png")
+    
+    # For Mornarch model
+    fc1_sparse_mask = model._modules['fc1'].weight.detach().cpu().numpy()
+    
+    print(fc1_sparse_mask.shape)
+    print("Saving factor: ", model._modules['fc1'].saving)
+    plt.imshow(fc1_sparse_mask[0, :, :], cmap='Reds')
     plt.title("First Layer Sparse Mask")
     plt.colorbar()
     plt.show()
-    plt.savefig("fc1_sparsemask.png")
+    plt.savefig("plots/fc1_sparsemask_mornarch.png")
 
 if __name__ == '__main__':
     main()
