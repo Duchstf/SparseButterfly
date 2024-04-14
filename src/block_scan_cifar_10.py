@@ -52,7 +52,7 @@ def test(model, device, test_loader):
         100. * correct / len(test_loader.dataset)))
 
 def main():
-    for train_index in range(16, 21):
+    for train_index in range(1, 10):
         print(f'Now training with blocksize of {train_index}')
         # Training settings
         parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 MLPs Vanilla and Monarch')
@@ -69,7 +69,7 @@ def main():
         parser.add_argument('--epochs', type=int, default=5, metavar='N',
                             help='number of epochs to train (default: 5)')
         
-        parser.add_argument('--lr', type=float, default=1.0, metavar='LR',
+        parser.add_argument('--lr', type=float, default=0.0005, metavar='LR',
                             help='learning rate (default: 1.0)')
         
         parser.add_argument('--gamma', type=float, default=0.7, metavar='M',
@@ -147,7 +147,7 @@ def main():
 
         if args.save_model:
             if args.monarch: torch.save(model.state_dict(), f"blockscan_plots/CIFAR10_mlp_monarch{train_index}.pt")
-            else: torch.save(model.state_dict(), f"blockscan_plots/CIFAR10_mlp_vanilla{train_indexz}.pt")
+            else: torch.save(model.state_dict(), f"blockscan_plots/CIFAR10_mlp_vanilla{train_index}.pt")
             
         #Save step loss
         loss_name = f'blockscan_plots/CIFAR10_MLP_Monarch{train_index}.npy' if args.monarch else f'blockscan_plots/CIFAR10_MLP_Vanilla{train_index}.npy'

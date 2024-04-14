@@ -9,7 +9,7 @@ import numpy as np
 import math
 
 from  ops import StructuredLinear, blockdiag_butterfly_multiply
-
+#test
 def generate_mask(base, block_size=None):
     if block_size is not None:
         num_r, num_c = base.shape

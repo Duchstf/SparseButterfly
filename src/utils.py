@@ -32,6 +32,6 @@ def plot_diag_weight(fc):
     for i in range(nblocks):        
         monarch[i * out_blksz : (i + 1) * out_blksz, i * in_blksz :(i + 1) * in_blksz] = w[i]
     
-    plt.imshow(monarch, cmap='Reds', vmin=0., vmax=0.1)
+    plt.imshow(monarch, cmap='Reds', vmin=0., vmax=0.001)
     plt.show()
     plt.savefig("plots/mornarch_fc0.png")
