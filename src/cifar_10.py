@@ -124,11 +124,24 @@ def main():
     test_loader = torch.utils.data.DataLoader(dataset_test, **test_kwargs)
     #Initialize the model
     if args.monarch:
-        model = CIFAR10_Monarch_MLP(3072).to(device)
+        model = CIFAR10_Monarch_MLP2(3072).to(device)
+        
+        # See the savings
+        # fc1= model._modules['fc1'].saving.detach().numpy()
+        # fc2= model._modules['fc2'].saving.detach().numpy()
+        # fc3= model._modules['fc3'].saving.detach().numpy()
+        # fc4= model._modules['fc4'].saving.detach().numpy()
+        
+        # print("Saving factor fc1: ", fc1)
+        # print("Saving factor fc2: ", fc2)
+        # print("Saving factor fc3: ", fc3)
+        # print("Saving factor fc4: ", fc4)
+        
+        # print("Total saving: ", fc1*fc2*fc3*fc4)
         
         # # Plot the diagonal matrix
-        fc1= model._modules['fc1']
-        plot_diag_weight(fc1)
+        # fc1= model._modules['fc1']
+        # plot_diag_weight(fc1)
     else:
         model = CIFAR10_MLP_Vanilla(3072).to(device)
         

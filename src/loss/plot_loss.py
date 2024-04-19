@@ -2,6 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import mplhep as hep
 
+def moving_average(data, window_size):
+    weights = np.ones(window_size) / window_size
+    return np.convolve(data, weights, mode='valid')
+
 def plot_loss():
     
     # Load style sheet
@@ -12,8 +16,8 @@ def plot_loss():
     loss2 = np.load('CIFAR10_MLP_Vanilla.npy')
     
     # Plot loss
-    plt.plot(loss1, label='Monarch')
-    plt.plot(loss2, label='Vanilla')
+    plt.plot(moving_average(loss1, 50), label='Butterfly + Low Rank')
+    plt.plot(moving_average(loss2, 50), label='Vanilla')
     plt.xlabel('Steps')
     plt.ylabel('Loss')
     plt.legend()
