@@ -124,7 +124,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(dataset_test, **test_kwargs)
     #Initialize the model
     if args.monarch:
-        model = CIFAR10_Monarch_MLP2(3072).to(device)
+        model = CIFAR10_Monarch_MLP(3072).to(device)
         
         # See the savings
         # fc1= model._modules['fc1'].saving.detach().numpy()

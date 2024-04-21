@@ -90,9 +90,12 @@ class CIFAR10_Monarch_MLP(nn.Module):
     def __init__(self, in_features, nblocks=1, out_features=10):
         super().__init__()
         self.fc1 = MonarchLinear(in_features, 3000, nblocks=nblocks, bias=False)
-        self.fc2 = MonarchLinear(3000, 1000,  nblocks=nblocks, bias=False)
-        self.fc3 = MonarchLinear(1000, 100,  nblocks=nblocks, bias=False)
-        self.fc4 = MonarchLinear(100, out_features, nblocks=nblocks, bias=False)
+        self.fc2 = MonarchLinear(3000, 2000,  nblocks=nblocks, bias=False)
+        self.fc3 = MonarchLinear(3000, 1000,  nblocks=nblocks, bias=False)
+        self.fc4 = MonarchLinear(1000, 500,  nblocks=nblocks, bias=False)
+        self.fc5 = MonarchLinear(500, 200,  nblocks=nblocks, bias=False)
+        self.fc6 = MonarchLinear(200, 100,  nblocks=nblocks, bias=False)
+        self.fc7 = MonarchLinear(100, out_features, nblocks=nblocks, bias=False)
         
     def forward(self, x):
         x = torch.flatten(x, 1)
@@ -103,6 +106,12 @@ class CIFAR10_Monarch_MLP(nn.Module):
         x = self.fc3(x)
         x = F.relu(x)
         x = self.fc4(x)
+        x = F.relu(x)
+        x = self.fc5(x)
+        x = F.relu(x)
+        x = self.fc6(x)
+        x = F.relu(x)
+        x = self.fc7(x)
         output = F.log_softmax(x, dim=1)
         return output
 class CIFAR10_Butterfly_MLP(nn.Module):
