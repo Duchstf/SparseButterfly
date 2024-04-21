@@ -50,6 +50,7 @@ def test(model, device, test_loader):
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
+    return test_loss
 
 def main():
     
@@ -150,10 +151,12 @@ def main():
     scheduler = StepLR(optimizer, step_size=1, gamma=args.gamma)
     
     training_loss = []
+    test_loss_list = []
     for epoch in range(1, args.epochs + 1):
         step_loss = train(args, model, device, train_loader, optimizer, epoch)
         training_loss += step_loss
-        test(model, device, test_loader)
+        test_loss = test(model, device, test_loader)
+        test_loss_list.append(test_loss)
         scheduler.step()
 
     if args.save_model:
@@ -163,6 +166,9 @@ def main():
     #Save step loss
     loss_name = 'loss/CIFAR10_MLP_Monarch.npy' if args.monarch else 'loss/CIFAR10_MLP_Vanilla.npy'
     np.save(loss_name, np.asarray(training_loss))
+
+    loss_name = 'loss/CIFAR10_MLP_Monarch_test.npy' if args.monarch else 'loss/CIFAR10_MLP_Vanilla_test.npy'
+    np.save(loss_name, np.asarray(test_loss_list))
 
 if __name__ == '__main__':
     main()
