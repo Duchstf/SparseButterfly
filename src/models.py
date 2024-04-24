@@ -100,7 +100,7 @@ class CIFAR10_Monarch_MLP(nn.Module):
         super().__init__()
         self.fc1 = MonarchLinear(in_features, 3000, nblocks=nblocks, bias=False)
         self.fc2 = MonarchLinear(3000, 2000,  nblocks=nblocks, bias=False)
-        self.fc3 = MonarchLinear(3000, 1000,  nblocks=nblocks, bias=False)
+        self.fc3 = MonarchLinear(2000, 1000,  nblocks=nblocks, bias=False)
         self.fc4 = MonarchLinear(1000, 500,  nblocks=nblocks, bias=False)
         self.fc5 = MonarchLinear(500, 200,  nblocks=nblocks, bias=False)
         self.fc6 = MonarchLinear(200, 100,  nblocks=nblocks, bias=False)
