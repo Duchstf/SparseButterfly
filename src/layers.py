@@ -226,10 +226,11 @@ blockdiag_multiply = BlockdiagMultiply.apply
         
 class BlockdiagLinear(StructuredLinear):
 
-    def __init__(self, *args, nblocks=4, shuffle=False, **kwargs):
+    def __init__(self, *args, nblocks=10, shuffle=False, **kwargs):
         """shuffle: apply channel_shuffle operation before the matmul as in ShuffleNet
         """
         super().__init__(*args, **kwargs)
+        nblocks = 10
         in_blksz = int(math.ceil(self.in_features / nblocks))
         out_blksz = int(math.ceil(self.out_features / nblocks))
         self.in_features_extended = in_blksz * nblocks
