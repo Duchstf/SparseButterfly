@@ -230,7 +230,7 @@ class BlockdiagLinear(StructuredLinear):
         """shuffle: apply channel_shuffle operation before the matmul as in ShuffleNet
         """
         super().__init__(*args, **kwargs)
-        nblocks = 10
+        nblocks = 100
         in_blksz = int(math.ceil(self.in_features / nblocks))
         out_blksz = int(math.ceil(self.out_features / nblocks))
         self.in_features_extended = in_blksz * nblocks

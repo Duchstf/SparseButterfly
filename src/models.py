@@ -200,11 +200,12 @@ def FeedForward(dim, expansion_factor = 4, dropout = 0., dense = BlockdiagLinear
         nn.Dropout(dropout)
     )
 
+
 def MLPMixerbob(*, image_size, channels, patch_size, dim, depth, num_classes, expansion_factor = 4, expansion_factor_token = 0.5, dropout = 0.):
     image_h, image_w = pair(image_size)
     assert (image_h % patch_size) == 0 and (image_w % patch_size) == 0, 'image must be divisible by patch size'
     num_patches = (image_h // patch_size) * (image_w // patch_size)
-    chan_first, chan_last = partial(nn.Conv1d, kernel_size = 1), nn.Linear
+    chan_first, chan_last = partial(nn.Conv1d, kernel_size = 1), BlockdiagLinear
 
     return nn.Sequential(
         Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
@@ -229,6 +230,7 @@ class CIFAR10_MLP_Mixer(nn.Module):
             depth = 12,
             num_classes = 10
         )
+
     def forward(self, x):
         output = F.log_softmax(self.mixer(x))
         return output
