@@ -3,6 +3,8 @@ import torch.nn.functional as F
 import torch
 from layers import *
 from functools import partial
+from mlp_mixer_pytorch import MLPMixer
+
 
 class MNIST_MLP_Vanilla(nn.Module):
     """
@@ -96,9 +98,10 @@ class CIFAR10_Monarch_MLP(nn.Module):
     MLP with Monarch matrices: https://arxiv.org/pdf/2204.00595.pdf
     Monarch Mixer: https://arxiv.org/pdf/2310.12109.pdf
     """
-    def __init__(self, in_features, nblocks=1, out_features=10):
+    def __init__(self, in_features, nblocks=4, out_features=10):
         super().__init__()
         self.fc1 = MonarchLinear(in_features, 3000, nblocks=nblocks, bias=False)
+        print(self.fc1.saving)
         self.fc2 = MonarchLinear(3000, 2000,  nblocks=nblocks, bias=False)
         self.fc3 = MonarchLinear(2000, 1000,  nblocks=nblocks, bias=False)
         self.fc4 = MonarchLinear(1000, 500,  nblocks=nblocks, bias=False)
@@ -169,4 +172,20 @@ class CIFAR10_Monarch_MLP2(nn.Module):
         x = F.relu(x)
         x = self.fc4(x)
         output = F.log_softmax(x, dim=1)
+        return output
+
+
+class CIFAR10_MLP_Mixer(nn.Module):
+    def __init__(self, ):
+        super().__init__()
+        self.mixer = MLPMixer(
+            image_size = (32, 32),
+            channels = 3,
+            patch_size = 8,
+            dim = 512,
+            depth = 12,
+            num_classes = 10
+        )
+    def forward(self, x):
+        output = F.log_softmax(self.mixer(x))
         return output

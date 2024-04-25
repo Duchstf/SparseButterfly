@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
+from torchsummary import summary
 
 from models import *
 from utils import plot_diag_weight
@@ -56,6 +57,9 @@ def main():
     
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch CIFAR-10 MLPs Vanilla and Monarch')
+    parser.add_argument('--mlp', action='store_true', default=False,
+                        help='Whether to train with MLP-mixer or not')
+
     parser.add_argument('--monarch', action='store_true',  default=False,
                         help='Whether to train with monarch matrices or not')
     
@@ -126,7 +130,17 @@ def main():
     #Initialize the model
     if args.monarch:
         model = CIFAR10_Monarch_MLP(3072).to(device)
+        print(model.parameters())
+        parameter_list = [p for p in model.parameters()]
+        print(len(parameter_list))
+        total_params = sum(p.numel() for p in model.parameters())
+        print(total_params)
+    elif args.mlp:
+        model = CIFAR10_MLP_Mixer().to(device)
+        total_params = sum(p.numel() for p in model.parameters())
         
+        print(total_params)
+
         # See the savings
         # fc1= model._modules['fc1'].saving.detach().numpy()
         # fc2= model._modules['fc2'].saving.detach().numpy()
@@ -145,6 +159,8 @@ def main():
         # plot_diag_weight(fc1)
     else:
         model = CIFAR10_MLP_Vanilla(3072).to(device)
+        total_params = sum(p.numel() for p in model.parameters())
+        print(total_params)
         
     optimizer = optim.Adam(model.parameters(), lr=args.lr) #args.lr
 
