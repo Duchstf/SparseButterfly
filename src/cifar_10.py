@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-from torchsummary import summary
+from torchinfo import summary
 
 from models import *
 from utils import plot_diag_weight
