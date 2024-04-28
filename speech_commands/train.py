@@ -6,7 +6,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 
-import torchsummary
 import torchvision
 import torchvision.transforms as transforms
 
@@ -15,10 +14,9 @@ import argparse
 
 from models import *
 from utils import progress_bar
+from models import *
 
 from torchinfo import summary
-
-model_name = "MonarchConvMixer"
 
 # Training
 def train(epoch):
@@ -74,7 +72,7 @@ def test(epoch):
         }
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        torch.save(state, f'./checkpoint/{model_name}.pth')
+        torch.save(state, './checkpoint/ckpt.pth')
         best_acc = acc
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
@@ -108,7 +106,17 @@ testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True
 testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
 
 #Initialize the model
-net = MonarchConvMixer(128, 8, kernel_size=8, patch_size=1, n_classes=10)
+net = MonarchMLPMixer(in_channels=3,
+img_size=32, 
+patch_size=4, 
+hidden_size=128, 
+hidden_s=512, 
+hidden_c=64, 
+num_layers=8, 
+num_classes=10, 
+drop_p=0.,
+off_act=False,
+is_cls_token=True)
 
 #Set model to device
 net=net.to(device)
@@ -117,15 +125,6 @@ print(torchsummary.summary(net, (3,32,32)))
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
-
-if args.resume:
-    # Load checkpoint.
-    print('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load(f'./checkpoint/{model_name}.pth')
-    net.load_state_dict(checkpoint['net'])
-    best_acc = checkpoint['acc']
-    start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr,momentum=0.9, weight_decay=5e-4)
