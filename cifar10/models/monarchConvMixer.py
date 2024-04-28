@@ -26,7 +26,7 @@ def MonarchConvMixer(dim, depth, kernel_size=9, patch_size=7, n_classes=1000):
         nn.GELU(),
         nn.BatchNorm2d(dim),
         
-        *[nn.Sequential(ConvMonarchMixerLayer(dim, dim, kernel_size))
+        *[nn.Sequential(ConvMonarchMixerLayer(dim, kernel_size))
         for i in range(depth)],
 
         nn.AdaptiveAvgPool2d((1,1)),
@@ -73,12 +73,12 @@ class ConvMonarchMixerLayer(nn.Module):
         
         assert padding=='same' #Only implement same padding for now
         assert isinstance(kernel_size, int) #Only support square kernel
-        assert input_channels == out_channels
+        assert in_channels == out_channels
 
         # Normal Conv2D weights (out channels, in_channels/groups, kernel_size[0], kernel_size[1])
         # Monarch Conv2D weights (out channels, in_channels/groups, nblocks, blocks_size[0], blocks_size[1])
         
-        # self.m1 = MonarchMatrix(sqrt_n) 
+        self.m1 = MonarchMatrix(sqrt_n) 
         # self.m2 = MonarchMatrix(sqrt_n)
 
         # self.m3 = MonarchMatrix(sqrt_d) 
@@ -88,23 +88,19 @@ class ConvMonarchMixerLayer(nn.Module):
         # self.d_kernel = nn.Parameter(torch.randn(1, sqrt_d ** 2))
         # self.layer_norm = nn.BatchNorm2d(in_channels)
 
-    def forward(self, x: torch.Tensor): # x.shape = (b, n, d)
+    def forward(self, x: torch.Tensor): # x.shape = (b, depth, kernel_size[0], kernel_size[1]) square kernel in this case
+
+        print(x.shape)
 
         x0 = x
-        x = self.depth_wise(x)
-        x = nn.GELU(x)
-        x = self.layer_norm(x)
+        # x = self.depth_wise(x)
+        # x = nn.GELU(x)
+        # x = self.layer_norm(x)
 
-        x = x0 + x
+        # x = x0 + x
 
-        x = self.point_wise(x)
-        x = nn.GELU(x)
-        x = self.layer_norm(x)
+        # x = self.point_wise(x)
+        # x = nn.GELU(x)
+        # x = self.layer_norm(x)
 
         return x
-
-        x_tilde = self.m2(nn.GELU(self.n_kernel * self.m1(x.transpose(-1, -2)))).transpose(-1, -2) # Depthwise conv
-
-        y = self.m4(torch.relu(self.d_kernel * self.m3(x_tilde))) # Pointwise Conv
-
-        return self.layer_norm(y + x_tilde) # skip connection
