@@ -28,7 +28,9 @@ from torchinfo import summary
 parser = argparse.ArgumentParser(description='PyTorch Speech Commands Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('--monarch', '-m', action='store_true', help='Train with Monarch model or not')
 args = parser.parse_args()
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 if device == "cuda":
     num_workers = 1
@@ -40,8 +42,6 @@ else:
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 torch.manual_seed(420)
-
-model_name = "MonarchConvMixer"
 
 #Initialize the model
 # net = MonarchConvMixer(128, 8, kernel_size=8, patch_size=1, n_classes=10)
@@ -75,8 +75,8 @@ waveform, sample_rate, label, speaker_id, utterance_number = train_set[0]
 print("Shape of waveform: {}".format(waveform.size()))
 print("Sample rate of waveform: {}".format(sample_rate))
 
-plt.plot(waveform.t().numpy())
-plt.savefig('plots/sample_waveform.png')
+# plt.plot(waveform.t().numpy())
+# plt.savefig('plots/sample_waveform.png')
 
 labels = sorted(list(set(datapoint[2] for datapoint in train_set)))
 print("Labels: ", labels)
@@ -107,7 +107,7 @@ def pad_sequence(batch):
     # Make all tensor in a batch the same length by padding with zeros
     batch = [item.t() for item in batch]
     batch = torch.nn.utils.rnn.pad_sequence(batch, batch_first=True, padding_value=0.)
-    return batch.permute(0, 2, 1)
+    return batch.permute(0, 2, 1)#.squeeze(1)
 
 
 def collate_fn(batch):
@@ -149,9 +149,41 @@ test_loader = torch.utils.data.DataLoader(
     pin_memory=pin_memory,
 )
 
-#---------------------Setting up the datasets---------------------
+#---------------------Define the model ---------------------
+if args.monarch:
+    net = MonarchMlp(transformed.shape[1], len(labels))
+    model_name = "MonarchMlp"
+else:
+    net = CONV(transformed.shape[0], len(labels))
+    model_name = 'MlpVanilla'
 
-"""
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+#Set model to device
+net=net.to(device)
+# print(torchsummary.summary(net, (transformed.shape[0], len(labels))))
+
+if device == 'cuda':
+    net = torch.nn.DataParallel(net)
+    cudnn.benchmark = True
+
+n = count_parameters(net)
+print("Number of parameters: %s" % n)
+
+if args.resume:
+    # Load checkpoint.
+    print('==> Resuming from checkpoint..')
+    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
+    checkpoint = torch.load(f'./checkpoint/{model_name}.pth')
+    net.load_state_dict(checkpoint['net'])
+    best_acc = checkpoint['acc']
+    start_epoch = checkpoint['epoch']
+
+#--------------------- Train the model ---------------------
+
+
 # Training
 def train(epoch):
     print('\nEpoch: %d' % epoch)
@@ -159,9 +191,11 @@ def train(epoch):
     train_loss = 0
     correct = 0
     total = 0
-    for batch_idx, (inputs, targets) in enumerate(trainloader):
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
+
+        inputs = transform(inputs)
         outputs = net(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
@@ -172,7 +206,7 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+        progress_bar(batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                      % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
 def test(epoch):
@@ -182,8 +216,10 @@ def test(epoch):
     correct = 0
     total = 0
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(testloader):
+        for batch_idx, (inputs, targets) in enumerate(test_loader):
             inputs, targets = inputs.to(device), targets.to(device)
+
+            inputs = transform(inputs)
             outputs = net(inputs)
             loss = criterion(outputs, targets)
 
@@ -192,7 +228,7 @@ def test(epoch):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+            progress_bar(batch_idx, len(test_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                          % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
     # Save checkpoint.
@@ -209,48 +245,12 @@ def test(epoch):
         torch.save(state, f'./checkpoint/{model_name}.pth')
         best_acc = acc
 
-print('==> Preparing data..')
-transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
-
-transform_test = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
-
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=130, shuffle=True, num_workers=2)
-
-testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
-
-#Set model to device
-net=net.to(device)
-print(torchsummary.summary(net, (3,32,32)))
-
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
-
-if args.resume:
-    # Load checkpoint.
-    print('==> Resuming from checkpoint..')
-    assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load(f'./checkpoint/{model_name}.pth')
-    net.load_state_dict(checkpoint['net'])
-    best_acc = checkpoint['acc']
-    start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=args.lr,momentum=0.9, weight_decay=5e-4)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+optimizer = optim.Adam(net.parameters(), lr=0.01, weight_decay=0.0001)
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)  # reduce the learning after 20 epochs by a factor of 10
 
-for epoch in range(start_epoch, start_epoch+1):
+for epoch in range(start_epoch, start_epoch+21):
     train(epoch)
     test(epoch)
     scheduler.step()
-"""
