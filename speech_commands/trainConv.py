@@ -69,6 +69,7 @@ class SubsetSC(SPEECHCOMMANDS):
 # Create training and testing split of the data. We do not use validation in this tutorial.
 train_set = SubsetSC("training")
 test_set = SubsetSC("testing")
+validation_set = SubsetSC("validation")
 
 waveform, sample_rate, label, speaker_id, utterance_number = train_set[0]
 
@@ -186,7 +187,7 @@ class M5(nn.Module):
         return F.log_softmax(x, dim=2)
 
 
-model = Mixer(8000, 35)
+model = M5()
 model.to(device)
 print(model)
 
@@ -198,9 +199,9 @@ def count_parameters(model):
 n = count_parameters(model)
 print("Number of parameters: %s" % n)
 
-if device == 'cuda':
-    net = torch.nn.DataParallel(net)
-    cudnn.benchmark = True
+# if device == 'cuda':
+#     model = torch.nn.DataParallel(model)
+#     cudnn.benchmark = True
 
 optimizer = optim.Adam(model.parameters(), lr=0.01, weight_decay=0.0001)
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)  # reduce the learning 
