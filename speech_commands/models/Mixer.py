@@ -42,5 +42,5 @@ def Mixer(input_length, num_classes, patch_size=100, dim=128, depth=4, expansion
         nn.LayerNorm(dim),
         Reduce('b n c -> b c', 'mean'),
         nn.Linear(dim, num_classes),
-        nn.Softmax(dim=1)
+        nn.LogSoftmax(dim=1)
     )
